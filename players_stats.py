@@ -24,9 +24,10 @@ for row in standings_table.select('tbody tr'):
     if team_tag:
         full_link = "https://fbref.com" + team_tag['href']
         team_links.append(full_link)
+
 for link in team_links:
     driver.get(link)
-    time.sleep(20)
+    time.sleep(15)
     html_content = driver.page_source
     soup = BeautifulSoup(html_content, 'html.parser')
     standard_table = soup.find('table', id='stats_standard_9')
