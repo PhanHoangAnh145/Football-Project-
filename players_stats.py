@@ -2,6 +2,9 @@ import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 import time
 import sqlite3
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 options = uc.ChromeOptions()
 
@@ -29,7 +32,12 @@ for row in standings_table.select('tbody tr'):
 
 for link in team_links:
     driver.get(link)
-    time.sleep(5)
+    
+    # Đợi đến khi bảng load xong
+    WebDriverWait(driver,10).until(
+        EC.presence_of_element_located((By.ID,"stats_standard_9"))
+    )
+
     html_content = driver.page_source
     soup = BeautifulSoup(html_content, 'html.parser')
     standard_table = soup.find('table', id='stats_standard_9')
@@ -62,6 +70,7 @@ for link in team_links:
 conn = sqlite3.connect('football.db')
 cursor = conn.cursor()
 
+cursor.execute('DROP TABLE IF EXISTS players')
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS players (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +81,7 @@ cursor.execute('''
         games INTEGER,
         games_starts INTEGER,
         minutes INTEGER,
+        minutes_90s FLOAT,
         goals INTEGER,
         assists INTEGER,
         goals_assists INTEGER,
@@ -79,32 +89,44 @@ cursor.execute('''
         pens_made INTEGER,
         pens_att INTEGER,
         cards_yellow INTEGER,
-        cards_red INTEGER
+        cards_red INTEGER,
+        goals_per90 FLOAT,
+        assists_per90 FLOAT,
+        goals_assists_per90 FLOAT,
+        goals_pens_per90 FLOAT,
+        goals_assists_pens_per90 FLOAT
     )
 ''')
 conn.commit()
 
 for x in players_data:
     cursor.execute('''
-        INSERT INTO players (player, nationality, position, age, games, games_starts, minutes, goals, assists, 
-                   goals_assists, goals_pens, pens_made, pens_att, cards_yellow, cards_red)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO players (player, nationality, position, age, games, games_starts, minutes, minutes_90s, goals, assists, 
+                   goals_assists, goals_pens, pens_made, pens_att, cards_yellow, cards_red, goals_per90, assists_per90, 
+                   goals_assists_per90, goals_pens_per90, goals_assists_pens_per90)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        x.get('player', 'N/a'),
-        x.get('nationality', 'N/a'),
-        x.get('position', 'N/a'),
-        int(x.get('age', 'N/a')),
-        int(x.get('games', 'N/a')),
-        int(x.get('games_starts', 'N/a')),
-        int(x.get('minutes', 'N/a').replace(",", "")), # Ép kiểu về số nguyên 
-        int(x.get('goals', 'N/a')),
-        int(x.get('assists', 'N/a')),
-        int(x.get('goals_assists', 'N/a')),
-        int(x.get('goals_pens', 'N/a')),
-        int(x.get('pens_made', 'N/a')),
-        int(x.get('pens_att', 'N/a')),
-        int(x.get('cards_yellow', 'N/a')),
-        int(x.get('cards_red', 'N/a')),
+        x.get('player'),
+        x.get('nationality'),
+        x.get('position'),
+        int(x.get('age')),
+        int(x.get('games')),
+        int(x.get('games_starts')),
+        int(x.get('minutes').replace(",", "")), # Ép kiểu về số nguyên 
+        float(x.get('minutes_90s')),
+        int(x.get('goals')),
+        int(x.get('assists')),
+        int(x.get('goals_assists')),
+        int(x.get('goals_pens')),
+        int(x.get('pens_made')),
+        int(x.get('pens_att')),
+        int(x.get('cards_yellow')),
+        int(x.get('cards_red')),
+        float(x.get('goals_per90')),
+        float(x.get('assists_per90')),
+        float(x.get('goals_assists_per90')),
+        float(x.get('goals_pens_per90')),
+        float(x.get('goals_assists_pens_per90'))
     ))
 
 # Lưu lại các thay đổi vào file .db
