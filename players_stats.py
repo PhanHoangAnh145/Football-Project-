@@ -109,12 +109,17 @@ def run_my_code():
 
     conn.commit()
     conn.close()
+    driver.quit()
     print("--- CHÚC MỪNG PHAN, DỮ LIỆU ĐÃ LƯU THÀNH CÔNG VÀO DATABASE! ---")
     try:
-        driver.close()  # Đóng cửa sổ trước
+        # driver.close()  # Đóng cửa sổ trước
         driver.quit()  # Thoát hẳn trình duyệt
     except:
-        pass  # Nếu có lỗi handle thì kệ nó, bỏ qua luôn
+        pass
+    finally:
+        # Buộc Python quên driver đi, tránh việc gọi __del__ lần nữa
+        del driver
+    # Nếu có lỗi handle thì kệ nó, bỏ qua luôn
 
 # THÊM: Dòng này là bắt buộc để không bị lỗi WinError 6 trên Windows
 if __name__ == "__main__":
