@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm thông tin cầu thủ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .search-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 50px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            padding: 0 40px 40px;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+            display: none;
+        }
+
+        .success-message {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #bee5eb;
+            display: none;
+        }
+
+        .player-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+
+        .player-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .player-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .player-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .player-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .player-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .position-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .nationality {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-number {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .goals {
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .assists {
+            color: #17a2b8;
+            font-weight: 700;
+        }
+
+        .cards-yellow {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .cards-red {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .search-section {
+                padding: 20px;
+            }
+
+            .search-container {
+                flex-direction: column;
+            }
+
+            .search-btn {
+                width: 100%;
+            }
+
+            .results-section {
+                padding: 0 20px 20px;
+            }
+
+            .player-table {
+                overflow-x: auto;
+            }
+
+            .player-table table {
+                min-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚽ Football Player Search</h1>
+            <p class="subtitle">Tìm kiếm thông tin chi tiết về cầu thủ</p>
+        </header>
+
+        <section class="search-section">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="playerName" 
+                    placeholder="Nhập tên cầu thủ..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="search-btn" onclick="searchPlayer()">
+                    🔍 Tìm kiếm
+                </button>
+            </div>
+        </section>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Đang tìm kiếm thông tin cầu thủ...</p>
+        </div>
+
+        <section class="results-section" id="results">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            
+            <div class="player-table" id="playerTable"></div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchPlayer();
+            }
+        }
+
+        async function searchPlayer() {
+            const playerName = document.getElementById('playerName').value.trim();
+            
+            if (!playerName) {
+                showError('Vui lòng nhập tên cầu thủ cần tìm');
+                return;
+            }
+
+            showLoading(true);
+            hideMessages();
+            hideResults();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/player?name=${encodeURIComponent(playerName)}`);
+                const data = await response.json();
+
+                if (response.status === 404) {
+                    showError(data.message || 'Không tìm thấy cầu thủ này');
+                    return;
+                }
+
+                if (!response.ok) {
+                    showError(data.error || 'Có lỗi xảy ra khi tìm kiếm');
+                    return;
+                }
+
+                showPlayerData(data);
+                showSuccess(`Đã tìm thấy thông tin cầu thủ: ${data.player}`);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối hoặc khởi động lại server.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showPlayerData(player) {
+            const tableContainer = document.getElementById('playerTable');
+            
+            const tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thông tin cơ bản</th>
+                            <th>Thống kê trận đấu</th>
+                            <th>Hiệu suất</th>
+                            <th>Thẻ phạt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="player-name">${player.player || 'N/A'}</div>
+                                <div class="nationality">🌍 ${player.nationality || 'N/A'}</div>
+                                <div class="position-badge">${player.position || 'N/A'}</div>
+                                <div>🎂 Tuổi: ${player.age || 'N/A'}</div>
+                            </td>
+                            <td>
+                                <div>🏆 Trận đấu: <span class="stat-number">${player.games || 0}</span></div>
+                                <div>🥅 Trận chính: <span class="stat-number">${player.games_starts || 0}</span></div>
+                                <div>⏱️ Phút chơi: <span class="stat-number">${player.minutes ? player.minutes.toLocaleString() : 0}</span></div>
+                                <div>📊 90s: <span class="stat-number">${player.minutes_90s || 0}</span></div>
+                            </td>
+                            <td>
+                                <div>⚽ Bàn thắng: <span class="goals">${player.goals || 0}</span></div>
+                                <div>🎯 Kiến tạo: <span class="assists">${player.assists || 0}</span></div>
+                                <div>📈 B+K: <span class="stat-number">${player.goals_assists || 0}</span></div>
+                                <div>🎯 Bàn/90: <span class="stat-number">${player.goals_per90 || 0}</span></div>
+                                <div>📊 KT/90: <span class="stat-number">${player.assists_per90 || 0}</span></div>
+                            </td>
+                            <td>
+                                <div>🟨 Thẻ vàng: <span class="cards-yellow">${player.cards_yellow || 0}</span></div>
+                                <div>🟥 Thẻ đỏ: <span class="cards-red">${player.cards_red || 0}</span></div>
+                                <div>⚽ Penalty: <span class="stat-number">${player.pens_made || 0}/${player.pens_att || 0}</span></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            tableContainer.innerHTML = tableHTML;
+            showResults();
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showResults() {
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function hideResults() {
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            showResults();
+        }
+
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Focus vào ô tìm kiếm khi trang load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('playerName').focus();
+        });
+    </script>
+</body>
+</html>
