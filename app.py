@@ -42,6 +42,23 @@ def get_players_by_club():
         return jsonify([dict(row) for row in players])
     except sqlite3.OperationalError:
         return jsonify({"message": "Tính năng tìm theo CLB chưa sẵn sàng vì thiếu cột 'club'"}), 404
+@app.route('/api/suggest', methods=['GET'])
+def suggest_players():
+    query = request.args.get('q', '')
+    if len(query) < 2:  # Chỉ gợi ý khi gõ từ 2 ký tự trở lên để tránh lag
+        return jsonify([])
+
+    conn = get_db_connection()
+    # Tìm các cầu thủ có tên bắt đầu hoặc chứa từ khóa (không phân biệt hoa thường với LIKE)
+    search_term = f"%{query}%"
+    players = conn.execute(
+        'SELECT player FROM players WHERE player LIKE ? LIMIT 5',
+        (search_term,)
+    ).fetchall()
+    conn.close()
+
+    # Trả về mảng danh sách tên: ["Alisson", "Alexis Mac Allister", ...]
+    return jsonify([row['player'] for row in players])
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

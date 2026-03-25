@@ -277,18 +277,30 @@
         </header>
 
         <section class="search-section">
-            <div class="search-container">
-                <input 
-                    type="text" 
-                    class="search-input" 
-                    id="playerName" 
-                    placeholder="Nhập tên cầu thủ..."
-                    onkeypress="handleKeyPress(event)"
-                >
-                <button class="search-btn" onclick="searchPlayer()">
-                    🔍 Tìm kiếm
-                </button>
-            </div>
+            <div class="search-box" style="position: relative; display: flex; gap: 10px; justify-content: center;">
+        <input type="text" id="playerName" autocomplete="off"
+               placeholder="Nhập tên cầu thủ (VD: Alisson)..." oninput="showSuggestions()"
+               style="padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 4px;">
+
+        <button onclick="searchPlayer()"
+                style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Tìm kiếm
+        </button>
+
+        <div id="suggestionBox" style="
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-202px); /* Căn chỉnh để nó nằm ngay dưới ô input */
+            width: 300px;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        </div>
+    </div>
         </section>
 
         <div class="loading" id="loading">
@@ -306,7 +318,39 @@
 
     <script>
         const API_BASE_URL = 'http://localhost:5000/api';
+        async function showSuggestions() {
+    const input = document.getElementById('playerName');
+    const box = document.getElementById('suggestionBox');
+    const query = input.value.trim();
 
+    if (query.length < 2) {
+        box.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Gọi đến API suggest bạn vừa thêm ở app.py
+        const response = await fetch(`http://127.0.0.1:5000/api/suggest?q=${query}`);
+        const names = await response.json();
+
+        if (names.length > 0) {
+            box.innerHTML = names.map(name =>
+                `<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; color: #333;"
+                      onclick="selectName('${name}')">${name}</div>`
+            ).join('');
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
+        }
+    } catch (e) { console.error("Lỗi gợi ý:", e); }
+}
+
+// Hàm này để khi nhấn vào tên gợi ý thì nó tự điền vào ô input
+function selectName(name) {
+    document.getElementById('playerName').value = name;
+    document.getElementById('suggestionBox').style.display = 'none';
+    searchPlayer(); // Tự động bấm tìm kiếm luôn cho tiện
+}
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 searchPlayer();
