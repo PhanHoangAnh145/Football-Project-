@@ -2,37 +2,42 @@ import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 import time
 import sqlite3
+import os
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# Hàm bao quanh code cũ của bạn
 def run_my_code():
+    # Khởi động trình duyệt
     options = uc.ChromeOptions()
-    # THÊM: Chỉ định bản 145 để khớp với Chrome của Phan
     driver = uc.Chrome(options=options, version_main=145)
 
     url = "https://fbref.com/en/comps/9/2024-2025/2024-2025-Premier-League-Stats"
+    print(f"Đang truy cập: {url}")
     driver.get(url)
 
-    time.sleep(15)
+    time.sleep(15) # Đợi trang chủ tải xong
 
     # Lấy mã HTML tĩnh
     html_content = driver.page_source
-
     soup = BeautifulSoup(html_content, 'html.parser')
     standings_table = soup.select_one('table.stats_table')
 
-    team_links = []
+    # Dùng team_info để lưu cả Tên đội bóng và Link
+    team_info = []
     players_data = []
 
     for row in standings_table.select('tbody tr'):
         team_tag = row.select_one('a')
         if team_tag:
+            team_name = team_tag.text.strip() # Lấy tên CLB
             full_link = "https://fbref.com" + team_tag['href']
-            team_links.append(full_link)
+            team_info.append((team_name, full_link))
 
-    for link in team_links:
+    print(f"Tìm thấy {len(team_info)} đội bóng. Bắt đầu cào dữ liệu cầu thủ...")
+
+    for team_name, link in team_info:
+        print(f"Đang xử lý đội: {team_name}")
         driver.get(link)
 
         # Đợi đến khi bảng load xong
@@ -51,6 +56,8 @@ def run_my_code():
                 continue
 
             stats = {}
+            stats['team'] = team_name
+
             for cell in row.find_all(["td", "th"]):
                 stat_name = cell.get("data-stat")
                 stat_value = cell.text.strip()
@@ -67,14 +74,21 @@ def run_my_code():
             if minutes > 90:
                 players_data.append(stats)
 
-    conn = sqlite3.connect('football.db')
+    # --- PHẦN LƯU DATABASE ---
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(script_dir, 'football.db')
+    
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute('DROP TABLE IF EXISTS players')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player TEXT, nationality TEXT, position TEXT, age INTEGER,
+            player TEXT, 
+            team TEXT, 
+            nationality TEXT, position TEXT, age INTEGER,
             games INTEGER, games_starts INTEGER, minutes INTEGER,
             minutes_90s FLOAT, goals INTEGER, assists INTEGER,
             goals_assists INTEGER, goals_pens INTEGER, pens_made INTEGER,
@@ -86,15 +100,16 @@ def run_my_code():
     conn.commit()
 
     for x in players_data:
-        # THÊM: bọc Try-Except ở đây để nếu 1 cầu thủ lỗi dữ liệu thì không dừng cả chương trình
         try:
             cursor.execute('''
-                INSERT INTO players (player, nationality, position, age, games, games_starts, minutes, minutes_90s, goals, assists, 
+                INSERT INTO players (player, team, nationality, position, age, games, games_starts, minutes, minutes_90s, goals, assists, 
                            goals_assists, goals_pens, pens_made, pens_att, cards_yellow, cards_red, goals_per90, assists_per90, 
                            goals_assists_per90, goals_pens_per90, goals_assists_pens_per90)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                x.get('player'), x.get('nationality'), x.get('position'),
+                x.get('player'), 
+                x.get('team'), # Lưu tên đội bóng vào cột team
+                x.get('nationality'), x.get('position'),
                 int(x.get('age', 0)), int(x.get('games', 0)), int(x.get('games_starts', 0)),
                 int(x.get('minutes', '0').replace(",", "")), float(x.get('minutes_90s', 0)),
                 int(x.get('goals', 0)), int(x.get('assists', 0)), int(x.get('goals_assists', 0)),
@@ -104,23 +119,21 @@ def run_my_code():
                 float(x.get('goals_assists_per90', 0)), float(x.get('goals_pens_per90', 0)),
                 float(x.get('goals_assists_pens_per90', 0))
             ))
-        except:
+        except Exception as e:
+            print(f"Lỗi khi lưu cầu thủ {x.get('player')}: {e}")
             continue
 
     conn.commit()
     conn.close()
-    driver.quit()
-    print("--- CHÚC MỪNG PHAN, DỮ LIỆU ĐÃ LƯU THÀNH CÔNG VÀO DATABASE! ---")
+    
+    print(f"\n--- {len(players_data)} CẦU THỦ ĐÃ LƯU THÀNH CÔNG VÀO DATABASE! ---")
+    
     try:
-        # driver.close()  # Đóng cửa sổ trước
-        driver.quit()  # Thoát hẳn trình duyệt
+        driver.quit()  
     except:
         pass
     finally:
-        # Buộc Python quên driver đi, tránh việc gọi __del__ lần nữa
         del driver
-    # Nếu có lỗi handle thì kệ nó, bỏ qua luôn
 
-# THÊM: Dòng này là bắt buộc để không bị lỗi WinError 6 trên Windows
 if __name__ == "__main__":
     run_my_code()
